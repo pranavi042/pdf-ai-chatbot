@@ -1,0 +1,32 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            cd ~/pdf-ai-chatbot
+            git pull origin main
+
+            # Restart backend
+            cd backend
+            pm2 restart backend || pm2 start "python3 manage.py runserver 0.0.0.0:8000" --name backend
+
+            # Restart frontend
+            cd ../frontend
+            pm2 restart frontend || pm2 start "npm run dev -- --host" --name frontend
